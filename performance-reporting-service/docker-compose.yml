@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=performance_db
+    networks:
+      - performance-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  performance-reporting:
+    build: .
+    ports:
+      - "8005:8000"
+    volumes:
+      - ./app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/performance_db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - performance-network
+      - virtual-labs-network
+
+volumes:
+  postgres_data:
+
+networks:
+  performance-network:
+    driver: bridge
+  virtual-labs-network:
+    external: true

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=performance_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - virtual-labs-network
+
+  user-progress:
+    build: ./user-progress-service
+    ports:
+      - "8004:8000"
+    volumes:
+      - ./user-progress-service/app:/app/app
+    networks:
+      - virtual-labs-network
+
+  performance-reporting:
+    build: ./performance-reporting-service
+    ports:
+      - "8005:8000"
+    volumes:
+      - ./performance-reporting-service/app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/performance_db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - virtual-labs-network
+
+  usage-analytics:
+    build: ./usage-analytics-service
+    ports:
+      - "8006:8000"
+    volumes:
+      - ./usage-analytics-service/app:/app/app
+    networks:
+      - virtual-labs-network
+
+volumes:
+  postgres_data:
+
+networks:
+  virtual-labs-network:
+    name: virtual-labs-network
+    driver: bridge

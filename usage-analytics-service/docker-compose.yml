@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  usage-analytics:
+    build: .
+    ports:
+      - "8006:8000"
+    volumes:
+      - ./app:/app/app
+    networks:
+      - virtual-labs-network
+
+networks:
+  virtual-labs-network:
+    external: true
