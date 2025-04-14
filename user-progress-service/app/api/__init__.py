@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.crud import create_lab_attempt, get_attempts_by_user
+from app.crud import create_lab_attempt, get_attempts_by_user, update_lab_attempt, delete_lab_attempt
 from app.models import schemas
 
 router = APIRouter()
@@ -41,3 +41,21 @@ def get_user_stats(user_id: str, db: Session = Depends(get_db)):
         "success_rate": successful_attempts / total_attempts,
         "average_time_per_attempt": avg_time,
     }
+
+
+@router.put("/progress/lab-attempt/{attempt_id}", response_model=schemas.LabAttemptRead)
+def update_attempt(attempt_id: int, attempt: schemas.LabAttemptCreate, db: Session = Depends(get_db)):
+    """Update an existing lab attempt"""
+    db_attempt = update_lab_attempt(db, attempt_id, attempt)
+    if not db_attempt:
+        raise HTTPException(status_code=404, detail="Lab attempt not found")
+    return db_attempt
+
+
+@router.delete("/progress/lab-attempt/{attempt_id}")
+def delete_attempt(attempt_id: int, db: Session = Depends(get_db)):
+    """Delete a lab attempt"""
+    success = delete_lab_attempt(db, attempt_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Lab attempt not found")
+    return {"status": "success", "message": f"Lab attempt {attempt_id} deleted"}
