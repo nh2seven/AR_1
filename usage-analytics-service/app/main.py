@@ -1,14 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 
 app = FastAPI(title="Usage Analytics Service")
 
 class LabUsageEvent(BaseModel):
+    id: Optional[int] = None
     user_id: str
     lab_type: str
-    event_type: str  # start, complete, error, resource_access
+    event_type: str
     event_data: Optional[Dict] = {}
     timestamp: datetime = datetime.now()
 
@@ -17,14 +18,15 @@ usage_events = []
 
 @app.post("/analytics/event")
 async def record_event(event: LabUsageEvent):
+    if event.id is None:
+        event.id = len(usage_events) + 1
     usage_events.append(event)
-    return {"status": "success", "message": "Event recorded"}
+    return {"status": "success", "message": "Event recorded", "id": event.id}
 
 @app.get("/analytics/usage/lab/{lab_type}")
 async def get_lab_usage(lab_type: str, days: Optional[int] = 7):
     cutoff_date = datetime.now() - timedelta(days=days)
-    relevant_events = [e for e in usage_events 
-                      if e.lab_type == lab_type and e.timestamp >= cutoff_date]
+    relevant_events = [e for e in usage_events if e.lab_type == lab_type and e.timestamp >= cutoff_date]
     
     if not relevant_events:
         raise HTTPException(status_code=404, detail="No usage data found for lab type")
@@ -92,3 +94,35 @@ async def get_usage_trends(days: Optional[int] = 30):
         "total_events": len(recent_events),
         "lab_usage": lab_usage
     }
+
+@app.put("/analytics/event/{event_id}")
+async def update_event(event_id: int, event: LabUsageEvent):
+    """Update an existing usage event"""
+    try:
+        event_index = next((i for i, e in enumerate(usage_events) if getattr(e, 'id', None) == event_id), None)
+        if event_index is None:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        # Preserve the original ID and update other fields
+        updated_event = event.model_copy(update={
+            'id': event_id,
+            'timestamp': event.timestamp or datetime.now()
+        })
+        usage_events[event_index] = updated_event
+        return {"status": "success", "message": "Event updated"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/analytics/event/{event_id}")
+async def delete_event(event_id: int):
+    """Delete a usage event"""
+    try:
+        event_index = next((i for i, e in enumerate(usage_events) 
+                          if getattr(e, 'id', None) == event_id), None)
+        if event_index is None:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        usage_events.pop(event_index)
+        return {"status": "success", "message": f"Event {event_id} deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
