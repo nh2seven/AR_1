@@ -4,12 +4,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
-
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_USER_DB=user_progress_db
       - POSTGRES_PERF_DB=performance_db
+      - POSTGRES_ANALYTICS_DB=usage_analytics_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -52,6 +52,11 @@ services:
       - "8006:8000"
     volumes:
       - ./usage-analytics-service/app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/usage_analytics_db
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - virtual-labs-network
 
