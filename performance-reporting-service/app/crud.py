@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from collections import Counter
-from typing import List, Dict
 from app.models import models, schemas
 
 def create_performance_record(db: Session, performance: schemas.UserPerformanceCreate):
@@ -19,9 +18,7 @@ def create_performance_record(db: Session, performance: schemas.UserPerformanceC
     return db_performance
 
 def get_lab_performance(db: Session, lab_type: str):
-    records = db.query(models.UserPerformanceRecord).filter(
-        models.UserPerformanceRecord.lab_type == lab_type
-    ).all()
+    records = db.query(models.UserPerformanceRecord).filter(models.UserPerformanceRecord.lab_type == lab_type).all()
     
     if not records:
         return None
@@ -38,9 +35,7 @@ def get_lab_performance(db: Session, lab_type: str):
     common_errors = [error for error, _ in error_counter.most_common(5)]
     
     # Update or create lab statistics
-    db_stats = db.query(models.LabStatistics).filter(
-        models.LabStatistics.lab_id == lab_type
-    ).first()
+    db_stats = db.query(models.LabStatistics).filter(models.LabStatistics.lab_id == lab_type).first()
     
     if db_stats:
         db_stats.total_users = unique_users
@@ -64,9 +59,7 @@ def get_lab_performance(db: Session, lab_type: str):
     return db_stats
 
 def get_user_performance(db: Session, user_id: str):
-    records = db.query(models.UserPerformanceRecord).filter(
-        models.UserPerformanceRecord.user_id == user_id
-    ).all()
+    records = db.query(models.UserPerformanceRecord).filter(models.UserPerformanceRecord.user_id == user_id).all()
     
     if not records:
         return None
@@ -90,3 +83,20 @@ def get_user_performance(db: Session, user_id: str):
     }
     
     return result
+
+def update_user_performance(db: Session, performance_id: int, performance: schemas.UserPerformanceCreate):
+    db_performance = db.query(models.UserPerformanceRecord).filter(models.UserPerformanceRecord.id == performance_id).first()
+    if db_performance:
+        for key, value in performance.model_dump().items():
+            setattr(db_performance, key, value)
+        db.commit()
+        db.refresh(db_performance)
+    return db_performance
+
+def delete_user_performance(db: Session, performance_id: int):
+    db_performance = db.query(models.UserPerformanceRecord).filter(models.UserPerformanceRecord.id == performance_id).first()
+    if db_performance:
+        db.delete(db_performance)
+        db.commit()
+        return True
+    return False
