@@ -8,7 +8,7 @@ services:
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
-      - POSTGRES_DB=performance_db
+      - POSTGRES_MULTIPLE_DB=user_progress_db,performance_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -23,6 +23,11 @@ services:
       - "8004:8000"
     volumes:
       - ./user-progress-service/app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/user_progress_db
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - virtual-labs-network
 
