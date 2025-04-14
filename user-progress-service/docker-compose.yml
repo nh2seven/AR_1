@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user_progress_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - virtual-labs-network
+
   user-progress:
     build: .
     ports:
@@ -9,18 +21,6 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/user_progress_db
     depends_on:
       - db
-    networks:
-      - virtual-labs-network
-
-  db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: user_progress_db
-    volumes:
-      - pgdata:/var/lib/postgresql/data
     networks:
       - virtual-labs-network
 
