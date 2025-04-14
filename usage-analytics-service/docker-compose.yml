@@ -1,15 +1,40 @@
-version: '3.8'
-
 services:
+  db:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=usage_analytics_db
+    networks:
+      - analytics-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   usage-analytics:
     build: .
     ports:
       - "8006:8000"
     volumes:
       - ./app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/usage_analytics_db
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
+      - analytics-network
       - virtual-labs-network
 
+volumes:
+  postgres_data:
+
 networks:
+  analytics-network:
+    driver: bridge
   virtual-labs-network:
     external: true
