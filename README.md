@@ -32,7 +32,7 @@ Collects and analyzes platform-wide usage patterns:
 ## Requirements
 - Docker
 - Docker Compose
-- PostgreSQL 15
+- PostgreSQL Latest (currently 17.4)
 - Python 3.11+
 
 ## Setup
