@@ -5,128 +5,32 @@ from typing import List
 from app.database import get_db
 from app.models import schemas
 from app import crud
+from app.utils.service_client import ServiceClient
 
 router = APIRouter()
-
-# User management endpoints
-@router.post("/users/", response_model=schemas.UserRead)
-async def create_new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """Create a new user"""
-    # Check if user with same email already exists
-    db_user = crud.get_user_by_email(db, user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Check if username is taken
-    db_user = crud.get_user_by_username(db, user.username)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already taken")
-    
-    return crud.create_user(db, user)
-
-@router.get("/users/", response_model=List[schemas.UserRead])
-async def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Get all users with pagination"""
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
-
-@router.get("/users/{user_id}", response_model=schemas.UserRead)
-async def read_user(user_id: str, db: Session = Depends(get_db)):
-    """Get a specific user by ID"""
-    db_user = crud.get_user(db, user_id)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
-
-@router.put("/users/{user_id}", response_model=schemas.UserRead)
-async def update_user_info(user_id: str, user: schemas.UserBase, db: Session = Depends(get_db)):
-    """Update user information"""
-    db_user = crud.get_user(db, user_id)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Convert Pydantic model to dict excluding unset values
-    user_data = user.model_dump(exclude_unset=True)
-    
-    return crud.update_user(db, user_id, user_data)
-
-@router.delete("/users/{user_id}")
-async def delete_user_account(user_id: str, db: Session = Depends(get_db)):
-    """Delete a user account"""
-    success = crud.delete_user(db, user_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"status": "success", "message": f"User {user_id} deleted"}
-
-# Lab management endpoints
-@router.post("/labs/", response_model=schemas.LabRead)
-async def create_new_lab(lab: schemas.LabCreate, db: Session = Depends(get_db)):
-    """Create a new lab"""
-    # Check if lab with same name already exists
-    db_lab = crud.get_lab_by_name(db, lab.name)
-    if db_lab:
-        raise HTTPException(status_code=400, detail="Lab name already exists")
-    
-    return crud.create_lab(db, lab)
-
-@router.get("/labs/", response_model=List[schemas.LabRead])
-async def read_labs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Get all labs with pagination"""
-    labs = crud.get_labs(db, skip=skip, limit=limit)
-    return labs
-
-@router.get("/labs/{lab_id}", response_model=schemas.LabRead)
-async def read_lab(lab_id: str, db: Session = Depends(get_db)):
-    """Get a specific lab by ID"""
-    db_lab = crud.get_lab(db, lab_id)
-    if not db_lab:
-        raise HTTPException(status_code=404, detail="Lab not found")
-    return db_lab
-
-@router.get("/labs/type/{lab_type}", response_model=List[schemas.LabRead])
-async def read_labs_by_type(lab_type: str, db: Session = Depends(get_db)):
-    """Get all labs of a specific type"""
-    labs = crud.get_labs_by_type(db, lab_type)
-    return labs
-
-@router.put("/labs/{lab_id}", response_model=schemas.LabRead)
-async def update_lab_info(lab_id: str, lab: schemas.LabBase, db: Session = Depends(get_db)):
-    """Update lab information"""
-    db_lab = crud.get_lab(db, lab_id)
-    if not db_lab:
-        raise HTTPException(status_code=404, detail="Lab not found")
-    
-    # Convert Pydantic model to dict excluding unset values
-    lab_data = lab.model_dump(exclude_unset=True)
-    
-    # If name is being updated, check it's not taken
-    if "name" in lab_data and lab_data["name"] != db_lab.name:
-        existing_lab = crud.get_lab_by_name(db, lab_data["name"])
-        if existing_lab:
-            raise HTTPException(status_code=400, detail="Lab name already exists")
-    
-    return crud.update_lab(db, lab_id, lab_data)
-
-@router.delete("/labs/{lab_id}")
-async def delete_lab_record(lab_id: str, db: Session = Depends(get_db)):
-    """Delete a lab"""
-    success = crud.delete_lab(db, lab_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Lab not found")
-    return {"status": "success", "message": f"Lab {lab_id} deleted"}
 
 # Analytics events endpoints
 @router.post("/analytics/event", response_model=schemas.LabUsageEvent)
 async def record_event(event: schemas.LabUsageEventCreate, db: Session = Depends(get_db)):
-    # Verify user exists
-    db_user = crud.get_user(db, event.user_id)
-    if not db_user:
+    # Verify user exists via service client
+    user_exists = await ServiceClient.validate_user_exists(event.user_id)
+    if not user_exists:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify lab type exists
+    lab_exists = await ServiceClient.validate_lab_exists(event.lab_type)
+    if not lab_exists:
+        raise HTTPException(status_code=404, detail="Lab type not found")
     
     return crud.create_event(db=db, event=event)
 
 @router.get("/analytics/usage/lab/{lab_type}")
 async def get_lab_usage(lab_type: str, days: int = 7, db: Session = Depends(get_db)):
+    # Verify lab type exists
+    lab_exists = await ServiceClient.validate_lab_exists(lab_type)
+    if not lab_exists:
+        raise HTTPException(status_code=404, detail="Lab type not found")
+        
     events = crud.get_lab_events(db, lab_type, days)
     if not events:
         raise HTTPException(status_code=404, detail="No usage data found for lab type")
@@ -192,10 +96,15 @@ async def get_usage_trends(days: int = 30, db: Session = Depends(get_db)):
 
 @router.put("/analytics/event/{event_id}", response_model=schemas.LabUsageEvent)
 async def update_event(event_id: int, event: schemas.LabUsageEventCreate, db: Session = Depends(get_db)):
-    # Verify user exists
-    db_user = crud.get_user(db, event.user_id)
-    if not db_user:
+    # Verify user exists via service client
+    user_exists = await ServiceClient.validate_user_exists(event.user_id)
+    if not user_exists:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify lab type exists
+    lab_exists = await ServiceClient.validate_lab_exists(event.lab_type)
+    if not lab_exists:
+        raise HTTPException(status_code=404, detail="Lab type not found")
         
     db_event = crud.update_event(db, event_id, event)
     if not db_event:
