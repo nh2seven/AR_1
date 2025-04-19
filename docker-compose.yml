@@ -18,6 +18,18 @@ services:
     networks:
       - virtual-labs-network
 
+  pgadmin:
+    image: postgres:latest
+    environment:
+      - PGPASSWORD=postgres
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["tail", "-f", "/dev/null"] # Keep container running
+    stop_grace_period: 5s
+    networks:
+      - virtual-labs-network
+
   user-progress:
     build: ./user-progress-service
     ports:
