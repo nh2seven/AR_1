@@ -25,7 +25,7 @@ Collects and analyzes platform-wide usage patterns:
 
 ## Technology Stack
 - **Backend**: FastAPI (Python 3.11)
-- **Database**: PostgreSQL 15
+- **Database**: PostgreSQL Latest
 - **Containerization**: Docker & Docker Compose
 - **Network**: Custom virtual network for service communication
 
@@ -47,7 +47,7 @@ cd AR_1
 docker-compose up --build
 ```
 
-## Service URLs
+## Service Endpoints
 Once running, the services are available locally at:
 - User Progress Service: http://localhost:8004
 - Performance Reporting Service: http://localhost:8005
@@ -57,6 +57,20 @@ API documentation (Swagger UI) is available at `/docs` for each service:
 - http://localhost:8004/docs
 - http://localhost:8005/docs
 - http://localhost:8006/docs
+
+A debugging container for the shared Postgres database is also available in the form of the default Postgres CLI:
+```sh
+docker compose up -d
+
+# Connect to user progress database
+docker compose exec pgadmin psql -h db -U postgres -d user_progress_db
+
+# Connect to performance reporting database
+docker compose exec pgadmin psql -h db -U postgres -d performance_db
+
+# Connect to usage analytics database
+docker compose exec pgadmin psql -h db -U postgres -d usage_analytics_db
+```
 
 ## Architecture
 The platform uses a microservices architecture where:
