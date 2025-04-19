@@ -1,11 +1,16 @@
 # User Progress Service
+Tracks user progress and attempts in virtual lab exercises. This service serves as the "source of truth" for user and lab data within the platform.
 
-Tracks user progress and attempts in virtual lab exercises.
+## Service Architecture
+This service maintains the core data about users and labs, and provides:
+- User management endpoints for creating, updating, and deleting users
+- Lab management endpoints for creating, updating, and deleting labs
+- Progress tracking for monitoring user attempts and performance
+
+**Note:** Other microservices (Performance Reporting Service and Usage Analytics Service) communicate with this service to validate users and labs, rather than maintaining their own duplicate user and lab data.
 
 ## API Endpoints
-
 ### User Management
-
 #### POST /users/
 Create a new user.
 
@@ -47,7 +52,6 @@ Update user information.
 Delete a user account.
 
 ### Lab Management
-
 #### POST /labs/
 Create a new lab.
 
@@ -90,7 +94,6 @@ Update lab information.
 Delete a lab.
 
 ### Progress Tracking
-
 #### POST /progress/lab-attempt
 Record a new lab attempt by a user.
 
@@ -168,13 +171,14 @@ Get aggregated statistics for a user.
 ```
 
 ## Integration
-
 - Port: 8004
 - Network: virtual-labs-network
 - Dependencies: PostgreSQL database
+- Services that depend on this:
+  - Performance Reporting Service
+  - Usage Analytics Service
 
 ## Setup
-
 ```bash
 docker-compose up --build
 ```

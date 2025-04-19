@@ -1,92 +1,16 @@
 # Usage Analytics Service
-
 Collects and analyzes usage patterns and events across the virtual labs platform.
 
+## Service Architecture
+This service focuses solely on collecting and analyzing usage events and patterns. It communicates with the User Progress Service to validate users and labs rather than maintaining duplicate user and lab data.
+
+**Key features:**
+- Records various user interaction events (start, complete, error, etc.)
+- Provides usage analytics for specific lab types
+- Offers platform-wide usage trends and statistics
+
 ## API Endpoints
-
-### User Management
-
-#### POST /users/
-Create a new user.
-
-**Request:**
-```json
-{
-  "username": "testuser1",
-  "full_name": "Test User",
-  "email": "testuser1@example.com"
-}
-```
-
-**Response:**
-```json
-{
-  "username": "testuser1",
-  "full_name": "Test User",
-  "email": "testuser1@example.com",
-  "id": "269b9e2e-e021-4316-8a59-9a79ff19d828",
-  "created_at": "2025-04-19T08:31:15.505369",
-  "last_active": "2025-04-19T08:31:15.505372"
-}
-```
-
-#### GET /users/
-List all users (with pagination).
-
-#### GET /users/{user_id}
-Get details of a specific user.
-
-#### PUT /users/{user_id}
-Update user information.
-
-#### DELETE /users/{user_id}
-Delete a user account.
-
-### Lab Management
-
-#### POST /labs/
-Create a new lab.
-
-**Request:**
-```json
-{
-  "name": "Filesystem Lab",
-  "description": "Learn about filesystem operations",
-  "lab_type": "filesystem",
-  "difficulty": "beginner"
-}
-```
-
-**Response:**
-```json
-{
-  "name": "Filesystem Lab",
-  "description": "Learn about filesystem operations",
-  "lab_type": "filesystem",
-  "difficulty": "beginner",
-  "id": "1c142292-2f0f-4b40-b8e5-4c301ce18e8b",
-  "created_at": "2025-04-19T08:32:22.623769",
-  "updated_at": "2025-04-19T08:32:22.623772"
-}
-```
-
-#### GET /labs/
-List all labs (with pagination).
-
-#### GET /labs/{lab_id}
-Get details of a specific lab.
-
-#### GET /labs/type/{lab_type}
-Get all labs of a specific type.
-
-#### PUT /labs/{lab_id}
-Update lab information.
-
-#### DELETE /labs/{lab_id}
-Delete a lab.
-
 ### Analytics Endpoints
-
 #### POST /analytics/event
 Record a usage event.
 
@@ -94,10 +18,9 @@ Record a usage event.
 ```json
 {
   "user_id": "269b9e2e-e021-4316-8a59-9a79ff19d828",
-  "lab_id": "1c142292-2f0f-4b40-b8e5-4c301ce18e8b", 
   "lab_type": "filesystem",
   "event_type": "start",
-  "details": {"session_id": "test-session-1"}
+  "event_data": {"session_id": "test-session-1"}
 }
 ```
 
@@ -107,7 +30,7 @@ Record a usage event.
   "user_id": "269b9e2e-e021-4316-8a59-9a79ff19d828",
   "lab_type": "filesystem",
   "event_type": "start",
-  "event_data": {},
+  "event_data": {"session_id": "test-session-1"},
   "id": 3,
   "timestamp": "2025-04-19T08:39:43.599397Z"
 }
@@ -117,10 +40,9 @@ Record a usage event.
 ```json
 {
   "user_id": "269b9e2e-e021-4316-8a59-9a79ff19d828",
-  "lab_id": "1c142292-2f0f-4b40-b8e5-4c301ce18e8b", 
   "lab_type": "filesystem",
   "event_type": "complete",
-  "details": {"session_id": "test-session-1", "time_spent": 320}
+  "event_data": {"session_id": "test-session-1", "time_spent": 320}
 }
 ```
 
@@ -173,13 +95,16 @@ Update an existing event.
 Delete an event.
 
 ## Integration
-
 - Port: 8006
 - Network: virtual-labs-network
-- Dependencies: PostgreSQL database
+- Dependencies: 
+  - PostgreSQL database
+  - User Progress Service (for user and lab validation)
+
+## Environment Variables
+- `USER_PROGRESS_SERVICE_URL`: URL for the User Progress Service (default: http://user-progress:8000)
 
 ## Setup
-
 ```bash
 docker-compose up --build
 ```

@@ -2,9 +2,17 @@
 - A microservices-based platform designed for backend developers to track, analyze, and report user progress and performance in virtual laboratory environments.
 - This repository is not designed for end-user interaction, and is not in production yet.
 
+## Microservices Architecture
+This platform implements a service-oriented architecture where:
+- **User Progress Service** serves as the "source of truth" for user and lab data
+- **Performance Reporting** and **Usage Analytics** services focus on their specific domains
+- Inter-service communication is implemented via REST APIs for user and lab validation
+- Each service maintains its own domain-specific database
+
 ## Services
 ### User Progress Service (Port: 8004)
 Tracks individual user progress and attempts in virtual lab exercises:
+- Maintains core user and lab data for the entire platform
 - Records lab attempts and completion status
 - Tracks time spent and errors encountered
 - Provides user-specific progress tracking
@@ -15,6 +23,7 @@ Analyzes and generates performance metrics:
 - Tracks success rates and completion times
 - Identifies common errors and challenges
 - Generates detailed user performance reports
+- Communicates with User Progress Service for user/lab validation
 
 ### Usage Analytics Service (Port: 8006)
 Collects and analyzes platform-wide usage patterns:
@@ -22,6 +31,7 @@ Collects and analyzes platform-wide usage patterns:
 - Monitors resource utilization
 - Provides trend analysis and insights
 - Records various types of usage events
+- Communicates with User Progress Service for user/lab validation
 
 ## Technology Stack
 - **Backend**: FastAPI (Python 3.11)
@@ -59,7 +69,6 @@ API documentation (Swagger UI) is available at `/docs` for each service:
 - http://localhost:8006/docs
 
 ### Example API Requests
-
 #### User Management (All Services)
 All three services share similar user management endpoints. Here's how to create and retrieve users:
 

@@ -1,92 +1,16 @@
 # Performance Reporting Service
-
 Analyzes and reports on lab performance metrics across users and lab types.
 
+## Service Architecture
+This service focuses solely on collecting, analyzing, and reporting performance metrics for labs and users. It communicates with the User Progress Service to validate users and labs rather than maintaining duplicate user and lab data.
+
+**Key features:**
+- Records lab performance data (completion time, success rate, resource usage)
+- Provides aggregate lab performance metrics 
+- Provides detailed user performance metrics across all labs
+
 ## API Endpoints
-
-### User Management
-
-#### POST /users/
-Create a new user.
-
-**Request:**
-```json
-{
-  "username": "testuser1",
-  "full_name": "Test User",
-  "email": "testuser1@example.com"
-}
-```
-
-**Response:**
-```json
-{
-  "username": "testuser1",
-  "full_name": "Test User",
-  "email": "testuser1@example.com",
-  "id": "dc1a707b-d1f6-4c99-b7c5-544a16afbd9d",
-  "created_at": "2025-04-19T08:30:55.808428",
-  "last_active": "2025-04-19T08:30:55.808430"
-}
-```
-
-#### GET /users/
-List all users (with pagination).
-
-#### GET /users/{user_id}
-Get details of a specific user.
-
-#### PUT /users/{user_id}
-Update user information.
-
-#### DELETE /users/{user_id}
-Delete a user account.
-
-### Lab Management
-
-#### POST /labs/
-Create a new lab.
-
-**Request:**
-```json
-{
-  "name": "Filesystem Lab",
-  "description": "Learn about filesystem operations",
-  "lab_type": "filesystem",
-  "difficulty": "beginner"
-}
-```
-
-**Response:**
-```json
-{
-  "name": "Filesystem Lab",
-  "description": "Learn about filesystem operations",
-  "lab_type": "filesystem",
-  "difficulty": "beginner",
-  "id": "8ef4e328-ac26-4cff-ab80-acb1bcc7a4f1",
-  "created_at": "2025-04-19T08:32:04.317717",
-  "updated_at": "2025-04-19T08:32:04.317720"
-}
-```
-
-#### GET /labs/
-List all labs (with pagination).
-
-#### GET /labs/{lab_id}
-Get details of a specific lab.
-
-#### GET /labs/type/{lab_type}
-Get all labs of a specific type.
-
-#### PUT /labs/{lab_id}
-Update lab information.
-
-#### DELETE /labs/{lab_id}
-Delete a lab.
-
 ### Performance Endpoints
-
 #### POST /performance/record
 Record performance data for a lab attempt.
 
@@ -94,12 +18,11 @@ Record performance data for a lab attempt.
 ```json
 {
   "user_id": "dc1a707b-d1f6-4c99-b7c5-544a16afbd9d",
-  "lab_id": "8ef4e328-ac26-4cff-ab80-acb1bcc7a4f1",
   "lab_type": "filesystem",
-  "score": 85,
   "completion_time": 295,
-  "errors_made": 3,
-  "success": true
+  "success": true,
+  "errors": ["permission_denied"],
+  "resources_used": {"memory": 128, "cpu": 25}
 }
 ```
 
@@ -110,8 +33,8 @@ Record performance data for a lab attempt.
   "lab_type": "filesystem",
   "completion_time": 295,
   "success": true,
-  "errors": [],
-  "resources_used": {},
+  "errors": ["permission_denied"],
+  "resources_used": {"memory": 128, "cpu": 25},
   "id": 2,
   "timestamp": "2025-04-19T08:38:25.379893Z"
 }
@@ -124,12 +47,12 @@ Get aggregated performance metrics for a specific lab type.
 ```json
 {
   "lab_type": "filesystem",
-  "lab_name": "Filesystem Lab",
-  "total_attempts": 1,
-  "unique_users": 1,
-  "success_rate": 1.0,
+  "total_users": 1,
   "avg_completion_time": 295.0,
-  "common_errors": []
+  "success_rate": 1.0,
+  "common_errors": ["permission_denied"],
+  "id": 1,
+  "last_updated": "2025-04-19T11:16:47.606301Z"
 }
 ```
 
@@ -140,12 +63,9 @@ Get detailed performance metrics for a specific user across all labs.
 ```json
 {
   "user_id": "dc1a707b-d1f6-4c99-b7c5-544a16afbd9d",
-  "username": "testuser1",
   "performance_by_lab": {
     "filesystem": {
-      "lab_name": "Filesystem Lab",
-      "lab_description": "Learn about filesystem operations",
-      "lab_difficulty": "beginner",
+      "lab_type": "filesystem",
       "attempts": 1,
       "success_rate": 1.0,
       "avg_completion_time": 295.0,
@@ -163,13 +83,16 @@ Update an existing performance record.
 Delete a performance record.
 
 ## Integration
-
 - Port: 8005
 - Network: virtual-labs-network
-- Dependencies: PostgreSQL database
+- Dependencies: 
+  - PostgreSQL database
+  - User Progress Service (for user and lab validation)
+
+## Environment Variables
+- `USER_PROGRESS_SERVICE_URL`: URL for the User Progress Service (default: http://user-progress:8000)
 
 ## Setup
-
 ```bash
 docker-compose up --build
 ```
