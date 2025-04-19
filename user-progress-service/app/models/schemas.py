@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
 from typing import List, Optional
 
@@ -22,8 +22,7 @@ class UserRead(UserBase):
     created_at: datetime
     last_active: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Lab schemas
@@ -46,8 +45,7 @@ class LabRead(LabBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Lab Attempt schemas
@@ -72,5 +70,4 @@ class LabAttemptRead(LabAttemptBase):
     lab_description: Optional[str] = None
     lab_difficulty: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
