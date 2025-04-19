@@ -52,9 +52,12 @@ services:
       - ./performance-reporting-service/app:/app/app
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/performance_db
+      - USER_PROGRESS_SERVICE_URL=http://user-progress:8000
     depends_on:
       db:
         condition: service_healthy
+      user-progress:
+        condition: service_started
     networks:
       - virtual-labs-network
 
@@ -66,9 +69,12 @@ services:
       - ./usage-analytics-service/app:/app/app
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/usage_analytics_db
+      - USER_PROGRESS_SERVICE_URL=http://user-progress:8000
     depends_on:
       db:
         condition: service_healthy
+      user-progress:
+        condition: service_started
     networks:
       - virtual-labs-network
 
