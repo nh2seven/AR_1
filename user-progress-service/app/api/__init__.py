@@ -100,6 +100,13 @@ def read_labs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return labs
 
 
+# Get labs by type
+@router.get("/labs/type/{lab_type}", response_model=List[schemas.LabRead])
+def read_labs_by_type(lab_type: str, db: Session = Depends(get_db)):
+    labs = get_labs_by_type(db, lab_type)
+    return labs
+
+
 # Get lab by ID
 @router.get("/labs/{lab_id}", response_model=schemas.LabRead)
 def read_lab(lab_id: str, db: Session = Depends(get_db)):
@@ -107,13 +114,6 @@ def read_lab(lab_id: str, db: Session = Depends(get_db)):
     if not db_lab:
         raise HTTPException(status_code=404, detail="Lab not found")
     return db_lab
-
-
-# Get labs by type
-@router.get("/labs/type/{lab_type}", response_model=List[schemas.LabRead])
-def read_labs_by_type(lab_type: str, db: Session = Depends(get_db)):
-    labs = get_labs_by_type(db, lab_type)
-    return labs
 
 
 # Update lab information
@@ -157,18 +157,22 @@ def record_lab_attempt(attempt: schemas.LabAttemptCreate, db: Session = Depends(
     return create_lab_attempt(db, attempt)
 
 
-# Get all lab attempts for a user
-@router.get("/progress/{user_id}", response_model=List[schemas.LabAttemptRead])
-def get_user_progress(user_id: str, db: Session = Depends(get_db)):
-    db_user = get_user(db, user_id)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+# Update lab attempts
+@router.put("/progress/lab-attempt/{attempt_id}", response_model=schemas.LabAttemptRead)
+def update_attempt(attempt_id: int, attempt: schemas.LabAttemptCreate, db: Session = Depends(get_db)):
+    db_attempt = update_lab_attempt(db, attempt_id, attempt)
+    if not db_attempt:
+        raise HTTPException(status_code=404, detail="Lab attempt not found")
+    return db_attempt
 
-    attempts = get_attempts_by_user(db, user_id)
-    if not attempts:
-        return []
 
-    return attempts
+# Delete lab attempt
+@router.delete("/progress/lab-attempt/{attempt_id}")
+def delete_attempt(attempt_id: int, db: Session = Depends(get_db)):
+    success = delete_lab_attempt(db, attempt_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Lab attempt not found")
+    return {"status": "success", "message": f"Lab attempt {attempt_id} deleted"}
 
 
 # Get all lab attempts for a user with stats
@@ -237,19 +241,15 @@ def get_user_stats(user_id: str, db: Session = Depends(get_db)):
     }
 
 
-# Update lab attempts
-@router.put("/progress/lab-attempt/{attempt_id}", response_model=schemas.LabAttemptRead)
-def update_attempt(attempt_id: int, attempt: schemas.LabAttemptCreate, db: Session = Depends(get_db)):
-    db_attempt = update_lab_attempt(db, attempt_id, attempt)
-    if not db_attempt:
-        raise HTTPException(status_code=404, detail="Lab attempt not found")
-    return db_attempt
+# Get all lab attempts for a user
+@router.get("/progress/{user_id}", response_model=List[schemas.LabAttemptRead])
+def get_user_progress(user_id: str, db: Session = Depends(get_db)):
+    db_user = get_user(db, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
 
+    attempts = get_attempts_by_user(db, user_id)
+    if not attempts:
+        return []
 
-# Delete lab attempt
-@router.delete("/progress/lab-attempt/{attempt_id}")
-def delete_attempt(attempt_id: int, db: Session = Depends(get_db)):
-    success = delete_lab_attempt(db, attempt_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Lab attempt not found")
-    return {"status": "success", "message": f"Lab attempt {attempt_id} deleted"}
+    return attempts

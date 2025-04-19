@@ -2,7 +2,8 @@ import httpx
 import os
 from typing import Dict, Any, Optional
 
-USER_SERVICE_URL = os.getenv("USER_PROGRESS_SERVICE_URL", "http://user-progress-service:8000")
+# Fix the default service URL to match the docker-compose service name
+USER_SERVICE_URL = os.getenv("USER_PROGRESS_SERVICE_URL", "http://user-progress:8000")
 
 
 # Class to handle requests to other microservices
@@ -28,7 +29,8 @@ class ServiceClient:
                 if response.status_code == 200:
                     return response.json()
                 return None
-            except httpx.RequestError:
+            except httpx.RequestError as e:
+                print(f"Error connecting to User Progress Service: {e}")
                 return None
 
     # Validate that a user exists in the User Progress Service
