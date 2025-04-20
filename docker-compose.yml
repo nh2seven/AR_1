@@ -77,6 +77,27 @@ services:
         condition: service_started
     networks:
       - virtual-labs-network
+  
+  integration-service:
+    build: ./integration
+    ports:
+      - "8007:8007"
+    volumes:
+      - ./integration:/app
+    environment:
+      - INTEGRATION_API_PORT=8007
+      - LAB_MONITORING_URL=http://host.docker.internal:3003
+      - RESOURCE_ALLOCATION_URL=http://host.docker.internal:3005
+      - PERFORMANCE_SERVICE_URL=http://host.docker.internal:3004
+      - USAGE_ANALYTICS_URL=http://usage-analytics:8000
+      - PERFORMANCE_REPORTING_URL=http://performance-reporting:8000
+    depends_on:
+      - usage-analytics
+      - performance-reporting
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - virtual-labs-network
 
 volumes:
   postgres_data:
