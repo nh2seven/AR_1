@@ -6,6 +6,7 @@
 This platform implements a service-oriented architecture where:
 - **User Progress Service** serves as the "source of truth" for user and lab data
 - **Performance Reporting** and **Usage Analytics** services focus on their specific domains
+- **Integration Service** connects with external infrastructure management services
 - Inter-service communication is implemented via REST APIs for user and lab validation
 - Each service maintains its own domain-specific database
 
@@ -32,6 +33,14 @@ Collects and analyzes platform-wide usage patterns:
 - Provides trend analysis and insights
 - Records various types of usage events
 - Communicates with User Progress Service for user/lab validation
+
+### Integration Service (Port: 8007)
+Integrates with external infrastructure management services:
+- Connects with the Infrastructure-Microservice system (https://github.com/Kritin-Thakur/Infrastructure-Microservice)
+- Enhances lab analytics with server utilization data
+- Correlates performance metrics with infrastructure allocation
+- Provides a unified API for accessing integrated data
+- Acts as an adapter between our services and external systems
 
 ## Technology Stack
 - **Backend**: FastAPI (Python 3.11)
@@ -62,11 +71,13 @@ Once running, the services are available locally at:
 - User Progress Service: http://localhost:8004
 - Performance Reporting Service: http://localhost:8005
 - Usage Analytics Service: http://localhost:8006
+- Integration Service: http://localhost:8007
 
 API documentation (Swagger UI) is available at `/docs` for each service:
 - http://localhost:8004/docs
 - http://localhost:8005/docs
 - http://localhost:8006/docs
+- http://localhost:8007/docs
 
 ### Example API Requests
 #### User Management (All Services)
