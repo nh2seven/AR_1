@@ -85,6 +85,18 @@ async def get_lab_utilization_by_type(lab_type: str) -> Dict[str, Any]:
         if lab_type in analytics.get("infrastructure_insights", {}).get("utilization_status", {}):
             filtered_analytics["infrastructure_insights"]["utilization_status"][lab_type] = analytics["infrastructure_insights"]["utilization_status"][lab_type]
 
+        # If we didn't find any relevant data for this lab type, add default data
+        if not filtered_analytics["lab_usage"] and not filtered_analytics["infrastructure_insights"]["popular_labs"] and not filtered_analytics["infrastructure_insights"]["utilization_status"]:
+            filtered_analytics["lab_usage"][lab_type] = {
+                "lab_type": lab_type,
+                "time_period_days": 7,
+                "unique_users": 0,
+                "total_events": 0,
+                "event_distribution": {},
+                "average_session_time_seconds": 0
+            }
+            filtered_analytics["integration_status"] = "partial"
+            
         return filtered_analytics
     except LabIntegrationError as e:
         logger.error(f"Integration error fetching lab utilization for {lab_type}: {e}")

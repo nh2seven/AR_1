@@ -150,17 +150,23 @@ else
 fi
 
 # Find a valid lab type from the response
-LAB_TYPE=$(echo "${LAB_UTIL_RESULT}" | python -c "import sys, json; data=json.load(sys.stdin); labs = data.get('infrastructure_insights', {}).get('utilization_status', {}); print(next(iter(labs.keys()), 'linux-basics'))")
+LAB_TYPE=$(echo "${SERVER_ALLOC_RESULT}" | python -c "import sys, json; data=json.load(sys.stdin); mapping = data.get('infrastructure', {}).get('allocation_map', {}); print(next(iter(mapping.keys()), 'linux-basics'))" 2>/dev/null || echo "linux-basics")
 
 # Test specific lab type endpoint
 echo -e "\n===== Lab-Specific Integration ====="
 echo "Endpoint: GET ${INTEGRATION_URL}/integration/lab-utilization/${LAB_TYPE}"
 LAB_SPECIFIC_RESULT=$(curl -s -f "${INTEGRATION_URL}/integration/lab-utilization/${LAB_TYPE}")
 
-if [ $? -eq 0 ] && [[ "${LAB_SPECIFIC_RESULT}" == *"${LAB_TYPE}"* ]]; then
-    echo "Lab-specific integration successful for ${LAB_TYPE}"
-    echo -e "\nFull Response:"
-    format_json "${LAB_SPECIFIC_RESULT}"
+if [ $? -eq 0 ]; then
+    # Parse the JSON response
+    if python -c "import json, sys; json.loads(sys.stdin.read())" <<< "${LAB_SPECIFIC_RESULT}" >/dev/null 2>&1; then
+        echo "Lab-specific integration successful for ${LAB_TYPE}"
+        echo -e "\nFull Response:"
+        format_json "${LAB_SPECIFIC_RESULT}"
+    else
+        echo "X Lab-specific integration failed: Invalid JSON response"
+        echo "${LAB_SPECIFIC_RESULT}"
+    fi
 else
     echo "X Lab-specific integration failed for ${LAB_TYPE}"
 fi

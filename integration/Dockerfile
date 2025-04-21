@@ -2,16 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy application files
+COPY integration_api.py .
+COPY server_allocation_adapter.py .
+COPY lab_utilization_adapter.py .
+COPY .env .
 
-# Default to port 8007 if not specified
-ENV INTEGRATION_API_PORT=8007
-
-# Expose the port
-EXPOSE ${INTEGRATION_API_PORT}
-
-# Run the API server
+# Run the application
 CMD ["python", "integration_api.py"]

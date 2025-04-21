@@ -6,12 +6,16 @@ import logging
 from datetime import datetime
 import time
 from functools import lru_cache
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("server_allocation_adapter")
 
-# Infrastructure-Microservice endpoints - default to host.docker.internal for containers
+# Infrastructure-Microservice endpoints - default to environment variables or fallbacks
 RESOURCE_ALLOCATION_BASE_URL = os.getenv("RESOURCE_ALLOCATION_URL", "http://host.docker.internal:3005")
 SERVERS_ENDPOINT = f"{RESOURCE_ALLOCATION_BASE_URL}/servers"
 ALLOCATIONS_ENDPOINT = f"{RESOURCE_ALLOCATION_BASE_URL}/allocations"
@@ -26,13 +30,17 @@ LAB_PERFORMANCE_ENDPOINT = f"{PERFORMANCE_REPORTING_BASE_URL}/performance/lab"
 USER_PERFORMANCE_ENDPOINT = f"{PERFORMANCE_REPORTING_BASE_URL}/performance/user"
 
 # Configure request timeout and retry settings
-REQUEST_TIMEOUT = 5  # seconds
-MAX_RETRIES = 2
-RETRY_DELAY = 1  # seconds
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "5"))  # seconds
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
+RETRY_DELAY = int(os.getenv("RETRY_DELAY", "1"))  # seconds
 
-# Cache duration in seconds (5 minutes)
-CACHE_DURATION = 300
+# Cache duration in seconds (5 minutes by default)
+CACHE_DURATION = int(os.getenv("CACHE_DURATION", "300"))
 
+# Print connection information
+logger.info(f"Connecting to Resource Allocation Service at: {RESOURCE_ALLOCATION_BASE_URL}")
+logger.info(f"Connecting to Performance Service at: {PERFORMANCE_SERVICE_BASE_URL}")
+logger.info(f"Connecting to Performance Reporting Service at: {PERFORMANCE_REPORTING_BASE_URL}")
 
 # Define a custom exception for integration failures
 class IntegrationError(Exception):

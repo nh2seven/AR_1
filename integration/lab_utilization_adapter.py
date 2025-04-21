@@ -6,12 +6,16 @@ import logging
 from datetime import datetime
 import time
 from functools import lru_cache
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("lab_utilization_adapter")
 
-# Infrastructure-Microservice endpoints - default to host.docker.internal for containers
+# Infrastructure-Microservice endpoints - get from environment variables or use fallbacks
 LAB_MONITORING_BASE_URL = os.getenv("LAB_MONITORING_URL", "http://host.docker.internal:3003")
 POPULAR_LABS_ENDPOINT = f"{LAB_MONITORING_BASE_URL}/monitor/labs/popular"
 LAB_UTILIZATION_ENDPOINT = f"{LAB_MONITORING_BASE_URL}/monitor/labs/over-under-utilized"
@@ -22,12 +26,16 @@ USAGE_ANALYTICS_TRENDS_ENDPOINT = f"{USAGE_ANALYTICS_BASE_URL}/analytics/trends"
 USAGE_ANALYTICS_LAB_ENDPOINT = f"{USAGE_ANALYTICS_BASE_URL}/analytics/usage/lab"
 
 # Configure request timeout and retry settings
-REQUEST_TIMEOUT = 5  # seconds
-MAX_RETRIES = 2
-RETRY_DELAY = 1  # seconds
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "5"))  # seconds
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
+RETRY_DELAY = int(os.getenv("RETRY_DELAY", "1"))  # seconds
 
-# Cache duration in seconds (5 minutes)
-CACHE_DURATION = 300
+# Cache duration in seconds (5 minutes by default)
+CACHE_DURATION = int(os.getenv("CACHE_DURATION", "300"))
+
+# Print connection information
+logger.info(f"Connecting to Lab Monitoring Service at: {LAB_MONITORING_BASE_URL}")
+logger.info(f"Connecting to Usage Analytics Service at: {USAGE_ANALYTICS_BASE_URL}")
 
 # Define a custom exception for integration failures
 class IntegrationError(Exception):
@@ -91,7 +99,11 @@ class LabUtilizationAdapter:
                     time.sleep(RETRY_DELAY)
                 else:
                     logger.error(f"All {MAX_RETRIES + 1} attempts to fetch popular labs failed.")
-                    raise IntegrationError(f"Failed to connect to Lab Monitoring Service: {str(e)}")
+                    # Return empty data instead of raising an exception
+                    empty_data = []
+                    cls._cached_data["popular_labs"] = empty_data
+                    cls._last_fetch_time["popular_labs"] = time.time()
+                    return empty_data
 
     # Fetch lab utilization data from the Infrastructure-Microservice
     @classmethod
@@ -122,7 +134,11 @@ class LabUtilizationAdapter:
                     time.sleep(RETRY_DELAY)
                 else:
                     logger.error(f"All {MAX_RETRIES + 1} attempts to fetch lab utilization failed.")
-                    raise IntegrationError(f"Failed to connect to Lab Monitoring Service: {str(e)}")
+                    # Return empty data instead of raising an exception
+                    empty_data = []  # Return an empty list of labs instead of raising an exception
+                    cls._cached_data["lab_utilization"] = empty_data
+                    cls._last_fetch_time["lab_utilization"] = time.time()
+                    return empty_data
 
     # Fetch usage analytics trends from our CC_Project's Usage Analytics Service
     @classmethod
@@ -153,7 +169,11 @@ class LabUtilizationAdapter:
                     time.sleep(RETRY_DELAY)
                 else:
                     logger.error(f"All {MAX_RETRIES + 1} attempts to fetch usage analytics failed.")
-                    raise IntegrationError(f"Failed to connect to Usage Analytics Service: {str(e)}")
+                    # Return empty data instead of raising an exception
+                    empty_data = {"lab_usage": {}}
+                    cls._cached_data[cache_key] = empty_data
+                    cls._last_fetch_time[cache_key] = time.time()
+                    return empty_data
 
     # Fetch lab usage data from our CC_Project's Usage Analytics Service
     @staticmethod
@@ -164,7 +184,15 @@ class LabUtilizationAdapter:
             return response.json()
         except requests.RequestException as e:
             logger.error(f"Error fetching lab usage for {lab_type}: {e}")
-            raise IntegrationError(f"Failed to fetch lab usage for {lab_type}: {str(e)}")
+            # Return empty data instead of raising an exception
+            return {
+                "lab_type": lab_type,
+                "time_period_days": days,
+                "unique_users": 0,
+                "total_events": 0,
+                "event_distribution": {},
+                "average_session_time_seconds": 0
+            }
 
     # Map lab ID from Infrastructure-Microservice to our lab type
     @staticmethod
@@ -189,19 +217,28 @@ class LabUtilizationAdapter:
     # Fetch enhanced lab analytics by combining data from both services
     @classmethod
     def get_enhanced_lab_analytics(cls) -> Dict[str, Any]:
+        # Initialize default response structure
+        enhanced_analytics = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "lab_usage": {},
+            "infrastructure_insights": {"popular_labs": [], "utilization_status": {}},
+            "integration_status": "success"
+        }
+        
         try:
-            # Get data from both services
+            # Get data from both services - these methods now return empty data on failure instead of raising exceptions
             popular_labs = cls.get_popular_labs()
             lab_utilization = cls.get_lab_utilization()
             our_usage_trends = cls.get_our_usage_analytics()
 
-            # Combine the data
-            enhanced_analytics = {
-                "timestamp": datetime.utcnow().isoformat(),
-                "lab_usage": {},
-                "infrastructure_insights": {"popular_labs": [], "utilization_status": {}},
-                "integration_status": "success"
-            }
+            # Track if we have partial data
+            has_infrastructure_data = bool(popular_labs) or bool(lab_utilization)
+            has_analytics_data = "lab_usage" in our_usage_trends and bool(our_usage_trends["lab_usage"])
+            
+            if not has_infrastructure_data and not has_analytics_data:
+                enhanced_analytics["integration_status"] = "failed"
+            elif not has_infrastructure_data or not has_analytics_data:
+                enhanced_analytics["integration_status"] = "partial"
 
             # Add our analytics data
             if our_usage_trends and "lab_usage" in our_usage_trends:
@@ -247,12 +284,26 @@ class LabUtilizationAdapter:
                         "ratio": lab.get("ratio"),
                     }
 
+            # Add default data for common lab types if we don't have data
+            default_lab_types = ["linux-basics", "docker", "kubernetes", "networking", "filesystem"]
+            for lab_type in default_lab_types:
+                if lab_type not in enhanced_analytics["lab_usage"]:
+                    enhanced_analytics["lab_usage"][lab_type] = {
+                        "lab_type": lab_type,
+                        "time_period_days": 7,
+                        "unique_users": 0,
+                        "total_events": 0,
+                        "event_distribution": {},
+                        "average_session_time_seconds": 0
+                    }
+
             return enhanced_analytics
-        except IntegrationError as e:
-            raise
         except Exception as e:
+            # Never fail, provide at least a minimal response
             logger.error(f"Unexpected error in get_enhanced_lab_analytics: {e}")
-            raise IntegrationError(f"Failed to get enhanced lab analytics: {str(e)}")
+            enhanced_analytics["integration_status"] = "error"
+            enhanced_analytics["error_details"] = str(e)
+            return enhanced_analytics
 
 
 # Example usage

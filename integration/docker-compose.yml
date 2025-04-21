@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  integration-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: integration-service
+    ports:
+      - "8007:8007"
+    environment:
+      - LAB_MONITORING_URL=http://host.docker.internal:3003
+      - RESOURCE_ALLOCATION_URL=http://host.docker.internal:3005
+      - PERFORMANCE_SERVICE_URL=http://host.docker.internal:3004
+      - USAGE_ANALYTICS_URL=${USAGE_ANALYTICS_URL:-http://usage-analytics:8000}
+      - PERFORMANCE_REPORTING_URL=${PERFORMANCE_REPORTING_URL:-http://performance-reporting:8000}
+      - USER_PROGRESS_URL=${USER_PROGRESS_URL:-http://user-progress:8000}
+      - INTEGRATION_API_PORT=8007
+    networks:
+      - cc_project_network
+      - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+networks:
+  cc_project_network:
+    external: true
